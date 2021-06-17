@@ -572,3 +572,25 @@ Skills["digattack"] = MakeSkill("🧱", 0, false, 500, 0, 0x785530,
 			Element: Elements["neutral"]
 		};
 	});
+
+// OTHER SKILLS THAT CANNOT BE LEARNED NORMALLY
+
+Skills["fly"] = MakeSkill("💸", 0, false, 30, 0, 0x785530,
+	"Fly", "The user flies into the air. On the next turn, they heal 2 hearts.",
+	function(User, Target) {
+		User.Skills.push("flyheal");
+		return {
+			Message: User.Name + " flew into the air!",
+			Damage: 0
+		};
+	});
+
+Skills["flyheal"] = MakeSkill("💸", 0, false, 500, 0, 0x785530,
+	"Fly Restoration", "The user returns to the ground and heals 2 hearts to themselves.",
+	function(User, Target) {
+		User.Skills = RemoveSkill(User.Skills, "flyheal");
+		return {
+			Message: User.Name + " restored 2 hearts of HP!",
+			UserDamage: -4
+		};
+	});
