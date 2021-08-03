@@ -119,6 +119,53 @@ Skills["randomsmack"] = MakeSkill("🎲", 0, true, 70, 0, 0x42e9f5,
 		};
 	});
 
+Skills["superioritycomplex"] = MakeSkill("⬆️", 0, true, 75, 0, 0x26d17e,
+	"Superiority Complex", "Deals 1.5 hearts of neutral damage if the user's HP is greater than the target's. Otherwise, the damage dealt will be 0.5 hearts.",
+	function(User, Target) {
+		const HpGreater = User.HP > Target.HP;
+		const Damage = HpGreater ? 3 : 1;
+		return {
+			Message: HpGreater ? (User.Name + "'s superiority inflicted 1.5 hearts of damage.") : (User.Name + "'s superiority was questioned, inflicting only half a heart of damage."),
+			Damage: Damage,
+			Element: Elements["neutral"]
+		};
+	});
+
+Skills["inferioritycomplex"] = MakeSkill("⤵️", 0, true, 75, 0, 0xd12659,
+	"Inferiority Complex", "Deals 1.5 hearts of neutral damage if the user's HP is less than the target's. Otherwise, the damage dealt will be 0.5 hearts.",
+	function(User, Target) {
+		const HpLess = User.HP < Target.HP;
+		const Damage = HpLess ? 3 : 1;
+		return {
+			Message: HpLess ? (User.Name + "'s inferiority inflicted 1.5 hearts of damage.") : (User.Name + "'s inferiority was questioned, inflicting only half a heart of damage."),
+			Damage: Damage,
+			Element: Elements["neutral"]
+		};
+	});
+
+Skills["equalitykiller"] = MakeSkill("🍄", 0, true, 50, 0, 0x8082ff,
+	"Equality Killer", "Deals 3 hearts of damage if the user's HP is the same as the target's. Otherwise, the damage dealt will be 0.5 hearts.",
+	function(User, Target) {
+		const HpEqual = User.HP === Target.HP;
+		const Damage = HpEqual ? 6 : 1;
+		return {
+			Message: HpEqual ? (User.Name + "'s broke the HP equality and eliminated 3 of " + Target.Name + "'s hearts.") : (User.Name + "'s HP was not equal; only half a heart of damage was inflicted."),
+			Damage: Damage,
+			Element: Elements["neutral"]
+		};
+	});
+
+Skills["instantsnap"] = MakeSkill("👌", 0, true, 2, 0, 0xffffff,
+	"Instant Snap", "Deals 10 hearts of neutral damage to the opponent. It will be used as frequently as one may win the lottery.",
+	function(User, Target) {
+		const Damage = 20;
+		return {
+			Message: User.Name + " snapped their fingers!",
+			Damage: Damage,
+			Element: Elements["neutral"]
+		};
+	});
+
 const CommonElementalDesc = "Deals either 1 heart of [element] damage to the opponent. If the user's element is [element], the skill will be powered up and do 2 hearts of damage.";
 
 Skills["firebolt"] = MakeSkill("🔥", 0, true, 50, 0, 0xf56642,
@@ -221,41 +268,61 @@ Skills["snowball"] = MakeSkill("❄️", 0, true, 95, 0, 0xb4ecf0,
 		};
 	});
 
+Skills["moltenlipstick"] = MakeSkill("💄", 0, true, 50, 0, 0xeb8338,
+	"Molten Lipstick", "Splashes melted lip-stick as hot as magma. Deals 2.5 hearts of fire damage to the opponent; however, the damage is decreased by 0.5 hearts each time the skill is used (resets each battle).",
+	function(User, Target) {
+		if(!User._LipstickPower) User._LipstickPower = 0;
+		const Damage = 5 - User._LipstickPower;
+		if(User._LipstickPower < 5) User._LipstickPower++;
+		const Messages = ["It's boiling hot!", "It's burning!", "It's firery!", "It's moderately hot.", "It's a little warm."];
+		return {
+			Message: User.Name + " flug flaming lipstick! " + Messages[Math.min(User._LipstickPower - 1, Messages.length - 1)],
+			Damage: Damage,
+			Element: Elements["fire"]
+		};
+	});
+
 // Non-Offensive Active Skills
+
+const MindStealCode = function(SkillName, User, Target) {
+	const PossibleSkills = [];
+	for(let i = 0; i < Target.Skills.length; i++) {
+		const SkillId = Target.Skills[i];
+		if(SkillId && User.Skills.indexOf(SkillId) === -1) {
+			const Skill = Skills[SkillId];
+			if(Skill && Skill.Findable) {
+				PossibleSkills.push(SkillId);
+			}
+		}
+	}
+
+	let Msg = User.Name + " used Mind Steal!";
+	if(PossibleSkills.length > 0) {
+		const SkillId = PossibleSkills[Math.floor(Math.random() * PossibleSkills.length)];
+		if(SkillId && Skills[SkillId]) {
+			User.Skills.push(SkillId);
+			Msg += " They successfully copied " + Skills[SkillId].Title + "!";
+		}
+	} else {
+		Msg += " They were unable to copy any of " + Target.Name + "'s skills.";
+	}
+
+	User.Skills = RemoveSkill(User.Skills, SkillName);
+
+	return {
+		Message: Msg,
+		Damage: 0,
+		Element: Elements["neutral"]
+	};
+};
 
 Skills["mindsteal"] = MakeSkill("👁️", 0, true, 50, 0, 0x841c9c,
 	"Mind Steal", "When this skill is used, the user copies a skill the target has. It can only be used once per battle, and only skills that are obtainable by players can be copied.",
-	function(User, Target) {
-		const PossibleSkills = [];
-		for(let i = 0; i < Target.Skills.length; i++) {
-			const SkillId = Target.Skills[i];
-			if(SkillId && User.Skills.indexOf(SkillId) === -1) {
-				const Skill = Skills[SkillId];
-				if(Skill && Skill.Findable) {
-					PossibleSkills.push(SkillId);
-				}
-			}
-		}
+	MindStealCode.bind(null, "mindsteal"));
 
-		let Msg = User.Name + " used Mind Steal!";
-		if(PossibleSkills.length > 0) {
-			const SkillId = PossibleSkills[Math.floor(Math.random() * PossibleSkills.length)];
-			if(SkillId && Skills[SkillId]) {
-				User.Skills.push(SkillId);
-				Msg += " They successfully copied " + Skills[SkillId].Title + "!";
-			}
-		} else {
-			Msg += " They were unable to copy any of " + Target.Name + "'s skills.";
-		}
-
-		User.Skills = RemoveSkill(User.Skills, "mindsteal");
-
-		return {
-			Message: Msg,
-			Damage: 0,
-			Element: Elements["neutral"]
-		};
-	});
+Skills["perfectmindsteal"] = MakeSkill("👁‍🗨", 0, true, 100, 0, 0xd02ff5,
+	"Perfect Mind Steal", "When this skill is used, the user copies a skill the target has. It can only be used once per battle, and only skills that are obtainable by players can be copied.",
+	MindStealCode.bind(null, "perfectmindsteal"));
 
 Skills["simplerecovery"] = MakeSkill("💗", 0, true, 30, 0, 0x62ff59,
 	"Simple Recovery", "Heals the user by 1 heart.",
@@ -288,12 +355,34 @@ Skills["movingillusion"] = MakeSkill("🧿", 1, true, 12, 0, 0x682b80,
 		return DefenseData.FinalDamage > 0
 	});
 
+Skills["bettermovingillusion"] = MakeSkill("🧿", 1, true, 25, 0, 0x682b80,
+	"Better Moving Illusion", "If this skill triggers when the opponent attacks, the user will dodge and will take no damage.",
+	function(User, Target, DefenseData) {
+		return {
+			Message: Target.Name + " was an illusion and managed to dodge it!",
+			Damage: 0
+		};
+	}, function(DefenseData) {
+		return DefenseData.FinalDamage > 0
+	});
+
 Skills["resistant"] = MakeSkill("💎", 1, true, 25, 0, 0x2b3c80,
 	"Resistant", "If this skill triggers when the opponent attacks, the amount of damage taken will be reduced by 50%.",
 	function(User, Target, DefenseData) {
 		return {
 			Message: Target.Name + " blocked it using Resistant!",
 			Damage: Math.ceil(DefenseData.FinalDamage / 2)
+		};
+	}, function(DefenseData) {
+		return DefenseData.FinalDamage > 0
+	});
+
+Skills["bulkyboy"] = MakeSkill("👤", 1, true, 80, 0, 0x2b3c80,
+	"Bulky Boy", "If this skill triggers when the opponent attacks, the amount of damage taken will be reduced by 25% (rounded up to nearest half-heart).",
+	function(User, Target, DefenseData) {
+		return {
+			Message: Target.Name + " resisted it using Bulky Boy!",
+			Damage: Math.ceil(DefenseData.FinalDamage * 0.75)
 		};
 	}, function(DefenseData) {
 		return DefenseData.FinalDamage > 0
@@ -325,6 +414,18 @@ Skills["petcactus"] = MakeSkill("🌵", 1, true, 20, 0, 0x06c23b,
 		return DefenseData.FinalDamage > 0
 	});
 
+Skills["wholesomepet"] = MakeSkill("🐶", 1, true, 24, 0, 0x452e03,
+	"Wholesome Pet", "If this skill triggers when the opponent attacks, the user's pet will take 1 hearts of neutral damage from the opponent.",
+	function(User, Target, DefenseData) {
+		return {
+			Message: Target.Name + "'s Pet Dog fought back!",
+			UserDamage: 2,
+			UserDamageElement: Elements["neutral"]
+		};
+	}, function(DefenseData) {
+		return DefenseData.FinalDamage > 0
+	});
+
 Skills["darkbeckon"] = MakeSkill("🌑", 1, true, 23, 0, 0x06c23b,
 	"Dark Beckon", "If this skill triggers when the opponent attacks, the opponent will take 0.5 hearts of gravity damage.",
 	function(User, Target, DefenseData) {
@@ -347,6 +448,18 @@ Skills["perfecttiming"] = MakeSkill("🕛", 1, true, 21, 0, 0xfcfbf0,
 		};
 	}, function(DefenseData) {
 		return (DefenseData.Turn % 2 === 0) && DefenseData.FinalDamage > 0
+	});
+
+Skills["offbeat"] = MakeSkill("🕘", 1, true, 20, 0, 0xfcfbf0,
+	"Off Beat", "If this skill triggers when the opponent attacks, the opponent will take 2 hearts of time damage. However, it can only trigger on odd-numbered turns.",
+	function(User, Target, DefenseData) {
+		return {
+			Message: "The perfect timing allowed " + Target.Name + " to deal damage in response!",
+			UserDamage: 2,
+			UserDamageElement: Elements["time"]
+		};
+	}, function(DefenseData) {
+		return (DefenseData.Turn % 2 === 1) && DefenseData.FinalDamage > 0
 	});
 
 Skills["phantomsensation"] = MakeSkill("👻", 1, true, 50, 0, 0xededed,
@@ -413,12 +526,32 @@ Skills["heartpound"] = MakeSkill("💕", 2, true, 50, 0, 0xff8080,
 		};
 	});
 
-Skills["surpriseattack"] = MakeSkill("🐁", 2, true, 25, 1000, 0x525252,
+Skills["randommushrooms"] = MakeSkill("🍄", 2, true, 100, 0, 0xff8080,
+	"Random Mushrooms", "The user's consumes a bunch of questionable fungi at the start of the battle. May add or remove a random number of hearts to the user.",
+	function(User, Target) {
+		const Hearts = (Math.random() * 8) - 4;
+		User.HP += Hearts;
+		User.MaxHP += Hearts;
+		return {
+			Message: User.Name + "'s chomped down a ton of mushrooms. They " + (Hearts > 0 ? ("gained " + (Hearts / 2).toString() + " hearts!") : (Hearts < 0 ? ("lost " + (Hearts / -2).toString() + " hearts!") : (" did not feel any different.")))
+		};
+	});
+
+Skills["surpriseattack"] = MakeSkill("🐁", 2, true, 50, 1000, 0x525252,
 	"Surprise Attack", "The user quickly attacks before the battle begins. Deals 0.5 hearts of damage if successful.",
 	function(User, Target) {
 		Target.HP -= 1;
 		return {
 			Message: User.Name + " snuck in a surprise attack and dealt 0.5 damage to " + Target.Name + "!"
+		};
+	});
+
+Skills["sneakylick"] = MakeSkill("👅", 2, true, 30, 1000, 0xe673ae,
+	"Sneaky Lick", "The user quickly licks the target before the battle begins. Deals 1 heart of damage if successful.",
+	function(User, Target) {
+		Target.HP -= 2;
+		return {
+			Message: User.Name + " licked " + Target.Name + " and dealt 1 damage!"
 		};
 	});
 
